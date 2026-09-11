@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toradex & Torizon Live Quiz</title>
+<style>
+:root {
+  --bg: #0b1726;
+  --surface: #121f33;
+  --surface2: #17253d;
+  --border: #1e3052;
+  --green: #96c837;
+  --cyan: #00a3e0;
+  --blue: #00508c;
+  --text: #e9edf4;
+  --muted: #7a8fa8;
+  --good: #4ddb8f;
+  --bad: #ef5b72;
+  --warn: #f5a623;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+/* HEADER */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header-logos { display: flex; align-items: center; gap: 20px; }
+.header-logos img { height: 32px; object-fit: contain; }
+.header-logos .sep { width: 1px; height: 28px; background: var(--border); }
+.header-title { font-size: 13px; color: var(--muted); font-family: monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* SCREENS */
+.screen { display: none; min-height: calc(100vh - 65px); padding: 40px 20px; }
+.screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* HOME */
+.home-box { text-align: center; max-width: 500px; width: 100%; }
+.home-box h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 700; margin-bottom: 8px; }
+.home-box h1 span { color: var(--green); }
+.home-box p { color: var(--muted); font-size: 15px; margin-bottom: 36px; }
+.btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  padding: 13px 28px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.btn:hover { opacity: .88; transform: translateY(-1px); }
+.btn-primary { background: var(--green); color: #0b1726; }
+.btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-secondary:hover { border-color: var(--cyan); color: var(--cyan); }
+.btn-danger { background: var(--bad); color: white; }
+.btn-sm { padding: 8px 16px; font-size: 13px; }
+
+/* JOIN */
+.form-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; max-width: 420px; width: 100%; }
+.form-box h2 { margin-bottom: 20px; font-size: 22px; }
+.input { width: 100%; padding: 11px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 15px; margin-bottom: 14px; outline: none; }
+.input:focus { border-color: var(--cyan); }
+.status-msg { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 20px; }
+
+/* HOST LOBBY */
+.lobby-wrap { max-width: 900px; width: 100%; }
+.lobby-top { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 28px; }
+.room-info { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; flex: 1; min-width: 220px; }
+.room-code { font-size: 52px; font-weight: 800; color: var(--green); font-family: monospace; letter-spacing: 0.12em; line-height: 1; }
+.room-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.qr-box { background: white; border-radius: 10px; padding: 10px; display: inline-block; }
+.qr-box img, .qr-box canvas { width: 140px; height: 140px; display: block; }
+.players-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; flex: 2; min-width: 280px; }
+.players-box h3 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+.player-list { display: flex; flex-wrap: wrap; gap: 10px; min-height: 60px; }
+.player-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 6px 14px; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 7px; }
+.player-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex-shrink: 0; }
+.player-count { font-size: 28px; font-weight: 700; color: var(--cyan); }
+
+/* QUESTION — HOST */
+.q-host-wrap { max-width: 860px; width: 100%; }
+.q-progress { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.q-num { font-family: monospace; font-size: 13px; color: var(--muted); }
+.timer-bar-wrap { flex: 1; margin: 0 16px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.timer-bar { height: 100%; background: var(--green); border-radius: 3px; transition: width 1s linear; }
+.timer-badge { font-family: monospace; font-size: 20px; font-weight: 700; color: var(--green); min-width: 38px; text-align: right; }
+.timer-badge.warn { color: var(--warn); }
+.timer-badge.danger { color: var(--bad); }
+.q-card-host { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 20px; }
+.q-tag { font-family: monospace; font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+.q-text-big { font-size: clamp(18px, 3vw, 26px); font-weight: 700; line-height: 1.35; }
+.opts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media(max-width:600px){ .opts-grid { grid-template-columns: 1fr; } }
+.opt-host { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; font-size: 15px; }
+.opt-letter { font-family: monospace; font-size: 12px; border: 1px solid var(--border); border-radius: 4px; width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.opt-host.reveal-correct { background: rgba(77,219,143,0.12); border-color: var(--good); }
+.opt-host.reveal-correct .opt-letter { border-color: var(--good); color: var(--good); }
+.opt-host.reveal-wrong { background: rgba(239,91,114,0.08); border-color: rgba(239,91,114,0.35); }
+.answers-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+.answers-bar h4 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.ans-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+.ans-fill { height: 8px; border-radius: 4px; background: var(--cyan); transition: width .5s ease; min-width: 4px; }
+.host-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* QUESTION — PLAYER */
+.p-wrap { max-width: 560px; width: 100%; }
+.p-header { text-align: center; margin-bottom: 24px; }
+.p-header .q-num { font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block; }
+.p-timer { font-size: 40px; font-weight: 800; font-family: monospace; color: var(--green); }
+.p-timer.warn { color: var(--warn); }
+.p-timer.danger { color: var(--bad); }
+.p-q-text { font-size: 18px; font-weight: 600; line-height: 1.4; margin-bottom: 20px; text-align: center; }
+.p-opts { display: flex; flex-direction: column; gap: 10px; }
+.p-opt { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 15px; transition: border-color .15s, background .15s; }
+.p-opt:hover { border-color: var(--cyan); background: var(--surface2); }
+.p-opt.selected { border-color: var(--cyan); background: rgba(0,163,224,0.1); }
+.p-opt.locked { cursor: default; }
+.p-opt.locked:hover { border-color: var(--border); background: var(--surface); }
+.p-opt.result-correct { border-color: var(--good); background: rgba(77,219,143,0.12); }
+.p-opt.result-wrong { border-color: var(--bad); background: rgba(239,91,114,0.1); }
+.p-opt .opt-letter { flex-shrink: 0; }
+.p-opt.selected .opt-letter { border-color: var(--cyan); color: var(--cyan); }
+.p-opt.result-correct .opt-letter { border-color: var(--good); color: var(--good); }
+.p-opt.result-wrong .opt-letter { border-color: var(--bad); color: var(--bad); }
+.p-feedback { text-align: center; margin-top: 20px; font-size: 14px; color: var(--muted); min-height: 22px; }
+.p-waiting { text-align: center; padding: 60px 20px; }
+.p-waiting .big-icon { font-size: 48px; margin-bottom: 16px; }
+.p-waiting h2 { font-size: 22px; margin-bottom: 8px; }
+.p-waiting p { color: var(--muted); font-size: 14px; }
+
+/* LEADERBOARD */
+.lb-wrap { max-width: 600px; width: 100%; }
+.lb-wrap h2 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 24px; }
+.lb-wrap h2 span { color: var(--green); }
+.lb-row { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+.lb-rank { font-family: monospace; font-size: 18px; font-weight: 700; color: var(--muted); width: 28px; flex-shrink: 0; }
+.lb-rank.gold { color: #ffd700; }
+.lb-rank.silver { color: #c0c0c0; }
+.lb-rank.bronze { color: #cd7f32; }
+.lb-name { flex: 1; font-size: 16px; font-weight: 600; }
+.lb-score { font-family: monospace; font-size: 16px; color: var(--green); font-weight: 700; }
+.lb-actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+
+/* EXPLAIN PANEL */
+.explain-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 14px; font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+.explain-panel b { color: var(--text); }
+
+/* UTIL */
+.divider { width: 100%; height: 1px; background: var(--border); margin: 20px 0; }
+.tag { display: inline-block; font-family: monospace; font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.1em; border: 1px solid var(--blue); border-radius: 4px; padding: 2px 7px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logos">
+    <img src="https://docs1.toradex.com/109746-toradex-logo-white.svg?v=1" alt="Toradex" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none;font-weight:800;font-size:18px;color:#e9edf4;">TORADEX</span>
+    <div class="sep"></div>
+    <img src="https://docs1.toradex.com/105996-torizon-logo-white.svg?v=1" alt="Torizon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none;font-weight:700;font-size:16px;color:#00a3e0;">torizon</span>
+  </div>
+  <div class="header-title">Technical Quiz — FAE &amp; Sales</div>
+</div>
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div class="home-box">
+    <h1>Live Quiz<br><span>FAE & Sales</span></h1>
+    <p>10 questions on module families, software, and technical strategy.<br>Built to reinforce what matters in front of a customer.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showScreen('screen-host-setup')">🖥️ Host a Live Room</button>
+      <button class="btn btn-secondary" onclick="showScreen('screen-join')">📱 Join a Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOIN -->
+<div class="screen" id="screen-join">
+  <div class="form-box">
+    <h2>Join a Room</h2>
+    <input class="input" id="join-code" placeholder="Room code (e.g. 4827)" maxlength="6">
+    <input class="input" id="join-name" placeholder="Your name">
+    <button class="btn btn-primary" style="width:100%" onclick="joinRoom()">Enter</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="showScreen('screen-home')">Back</button>
+    <div class="status-msg" id="join-status"></div>
+  </div>
+</div>
+
+<!-- HOST SETUP -->
+<div class="screen" id="screen-host-setup">
+  <div class="form-box">
+    <h2>Host a Live Room</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">A room code will be generated automatically. Share it with participants.</p>
+    <button class="btn btn-primary" style="width:100%" onclick="createRoom()">Create Room & Get Code</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="showScreen('screen-home')">Back</button>
+    <div class="status-msg" id="setup-status"></div>
+  </div>
+</div>
+
+<!-- HOST LOBBY -->
+<div class="screen" id="screen-host-lobby">
+  <div class="lobby-wrap">
+    <div class="lobby-top">
+      <div class="room-info">
+        <div class="room-label">Room Code</div>
+        <div class="room-code" id="lobby-code">----</div>
+        <div style="margin-top:16px;">
+          <div class="room-label" style="margin-bottom:8px;">Scan to join</div>
+          <div class="qr-box"><canvas id="qr-canvas" width="140" height="140"></canvas></div>
+        </div>
+      </div>
+      <div class="players-box">
+        <h3>Participants — <span class="player-count" id="player-count">0</span></h3>
+        <div class="player-list" id="player-list"></div>
+        <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="start-btn" onclick="startQuiz()" disabled>Start Quiz</button>
+          <button class="btn btn-secondary btn-sm" onclick="showScreen('screen-home')">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOST QUESTION -->
+<div class="screen" id="screen-host-q">
+  <div class="q-host-wrap">
+    <div class="q-progress">
+      <span class="q-num" id="host-q-num">Q 1 / 10</span>
+      <div class="timer-bar-wrap"><div class="timer-bar" id="host-timer-bar" style="width:100%"></div></div>
+      <span class="timer-badge" id="host-timer">60</span>
+    </div>
+    <div class="q-card-host">
+      <div class="tag" id="host-q-tag"></div>
+      <div class="q-text-big" id="host-q-text"></div>
+    </div>
+    <div class="opts-grid" id="host-opts"></div>
+    <div class="answers-bar">
+      <h4>Answers received: <span id="ans-count">0</span></h4>
+      <div id="ans-bars"></div>
+    </div>
+    <div class="explain-panel" id="host-explain" style="display:none;margin-bottom:18px;"></div>
+    <div class="host-actions">
+      <button class="btn btn-secondary btn-sm" id="reveal-btn" onclick="revealAnswer()">Reveal Answer</button>
+      <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none;">Next Question →</button>
+      <button class="btn btn-primary" id="finish-btn" onclick="showLeaderboard()" style="display:none;">See Results 🏆</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER WAITING -->
+<div class="screen" id="screen-player-wait">
+  <div class="p-waiting">
+    <div class="big-icon">⏳</div>
+    <h2>Waiting for the host...</h2>
+    <p id="wait-msg">The quiz will start shortly.</p>
+  </div>
+</div>
+
+<!-- PLAYER QUESTION -->
+<div class="screen" id="screen-player-q">
+  <div class="p-wrap">
+    <div class="p-header">
+      <span class="q-num" id="player-q-num">Question 1 of 10</span>
+      <div class="p-timer" id="player-timer">60</div>
+    </div>
+    <div class="p-q-text" id="player-q-text"></div>
+    <div class="p-opts" id="player-opts"></div>
+    <div class="p-feedback" id="player-feedback"></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="screen" id="screen-leaderboard">
+  <div class="lb-wrap">
+    <h2>🏆 <span>Leaderboard</span></h2>
+    <div id="lb-list"></div>
+    <div class="lb-actions">
+      <button class="btn btn-primary" id="lb-next-btn" onclick="nextQuestion()" style="display:none;">Next Question →</button>
+      <button class="btn btn-primary" id="lb-finish-btn" onclick="finalLeaderboard()" style="display:none;">Final Results 🏆</button>
+      <button class="btn btn-secondary" onclick="resetAll()">New Game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const PANTRY_ID   = "08eb50bb-7e6b-4a98-a094-2d0efafdf2f5";
+const PANTRY_BASE = "https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/";
+const POLL_MS     = 2500;
+const Q_TIME      = 60;
+
+// ─── QUESTIONS ────────────────────────────────────────────────────────────────
+const QUESTIONS = [
+  {
+    tag: "System on Modules",
+    text: "A customer is looking for a high-performance platform that can scale up toward processors like the TI AM69. Which Toradex family do you recommend?",
+    options: ["Lino","Verdin","Aquila","SMARC"],
+    correct: 2,
+    explain: "<b>Aquila</b> is built for high performance and high I/O density — the right family when the customer needs room to grow toward more powerful processors like the TI AM69."
+  },
+  {
+    tag: "System on Modules",
+    text: "A customer wants a compact, cost-effective design and is already familiar with the NXP i.MX 8M Plus ecosystem. Which family fits best?",
+    options: ["Aquila","Verdin","OSM","Apalis"],
+    correct: 1,
+    explain: "<b>Verdin</b> is Toradex's modern, cost-optimized family — designed for compact systems and compatible with the i.MX 8M Plus ecosystem."
+  },
+  {
+    tag: "System on Modules",
+    text: "A customer's procurement team requires the module to follow an open industry standard so they can switch suppliers if needed. Which family do you offer?",
+    options: ["Verdin","Aquila","SMARC","Colibri"],
+    correct: 2,
+    explain: "<b>SMARC</b> follows an open industry standard, which is exactly what customers need when second sourcing or multi-vendor flexibility is a hard requirement."
+  },
+  {
+    tag: "System on Modules",
+    text: "A customer wants to start a brand new project using NXP i.MX 8 processors. Which family is the right recommendation?",
+    options: ["Verdin","Apalis","Colibri","None of the above"],
+    correct: 0,
+    explain: "<b>Verdin</b> is the recommended family for new designs. Apalis and Colibri remain supported for existing projects — but for anything new, Verdin is the answer."
+  },
+  {
+    tag: "Software",
+    text: "Which of the following statements about Yocto BSP and Torizon are true?",
+    options: [
+      "Yocto offers maximum flexibility, but requires strong embedded Linux expertise",
+      "Torizon is ready to use without Yocto knowledge, and includes OTA updates and Torizon Cloud",
+      "Torizon offers production-ready images, maintained by Toradex",
+      "All of the above"
+    ],
+    correct: 3,
+    explain: "All three are correct — <b>Yocto</b> is flexible but complex; <b>Torizon</b> is the ready-to-use path with production images, OTA updates, and cloud integration maintained by Toradex."
+  },
+  {
+    tag: "Software",
+    text: "A customer wants to customize their Torizon OS image — adding packages or drivers — but their team has no experience with Yocto. Which tool solves this?",
+    options: ["Torizon Core Builder (TCB)","Yocto Project BSP directly","The VS Code extension only","Not possible without learning Yocto"],
+    correct: 0,
+    explain: "<b>Torizon Core Builder (TCB)</b> lets customers customize Torizon OS images and publish builds to Torizon Cloud — no Yocto knowledge needed."
+  },
+  {
+    tag: "Security / CRA",
+    text: "Under the EU Cyber Resilience Act (CRA), manufacturers must provide free security patches for a minimum period after placing a product on the market. How long is that?",
+    options: ["1 year","2 years","At least 5 years","Only during the commercial warranty"],
+    correct: 2,
+    explain: "The CRA sets a minimum floor of <b>5 years</b> of free security updates. Torizon ships CRA-ready — with SBOM, Secure Boot, and OTA updates built in."
+  },
+  {
+    tag: "Security / CRA",
+    text: "If a manufacturer detects an actively exploited vulnerability, how quickly must they send an early warning to the authorities (CSIRT/ENISA)?",
+    options: ["6 hours","Within 24 hours","Within 48 hours","Within 72 hours"],
+    correct: 1,
+    explain: "The CRA requires an <b>early warning within 24 hours</b> of detecting an actively exploited vulnerability — this is a fast-moving regulatory obligation."
+  },
+  {
+    tag: "Cloud & Services",
+    text: "A customer's devices are deployed in the field with limited or no internet access. How does Torizon Cloud handle software updates in that scenario?",
+    options: [
+      "Through Secure Offline Updates, which don't rely on a constant connection",
+      "Both update modes require a constant internet connection",
+      "Secure Offline Updates only works on Windows Embedded devices",
+      "Remote Updates is the only mechanism Torizon Cloud offers"
+    ],
+    correct: 0,
+    explain: "<b>Secure Offline Updates</b> is designed exactly for this — it allows fleet updates without depending on continuous connectivity."
+  },
+  {
+    tag: "Channel / Registration",
+    text: "A distributor has identified a project with a customer that has never worked with Toradex before. What type of registration should they request to protect the opportunity and access special pricing?",
+    options: ["Demand Fulfillment","Demand Creation","No registration required","Direct registration with Toradex, bypassing the distributor"],
+    correct: 1,
+    explain: "<b>Demand Creation</b> applies to new customers or projects — it protects the distributor's opportunity and unlocks Demand-Gen Pricing from their cost book."
+  }
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let role        = null;   // 'host' | 'player'
+let roomCode    = null;
+let playerName  = null;
+let currentQ    = 0;
+let score       = 0;
+let timerInt    = null;
+let pollInt     = null;
+let timeLeft    = Q_TIME;
+let answered    = false;
+let revealed    = false;
+let players     = {};     // { name: score }
+let answerCounts= [];
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function $(id){ return document.getElementById(id); }
+function rndCode(){ return Math.floor(1000 + Math.random()*9000).toString(); }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ─── PANTRY ───────────────────────────────────────────────────────────────────
+async function pantrySet(basket, data){
+  await fetch(PANTRY_BASE + basket, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+}
+async function pantryGet(basket){
+  const r = await fetch(PANTRY_BASE + basket);
+  if(!r.ok) return null;
+  return r.json();
+}
+async function pantryUpdate(basket, fn){
+  const cur = await pantryGet(basket) || {};
+  const next = fn(cur);
+  await pantrySet(basket, next);
+  return next;
+}
+
+// ─── QR CODE (pure canvas) ────────────────────────────────────────────────────
+function drawQR(canvasId, text){
+  // Simple URL QR — uses a free public API that returns a PNG
+  const canvas = $(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => ctx.drawImage(img, 0, 0, 140, 140);
+  img.onerror = () => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,140,140);
+    ctx.fillStyle = '#000000';
+    ctx.font = '11px monospace';
+    ctx.fillText('qr.io/?url=' + encodeURIComponent(text).slice(0,20), 4, 72);
+  };
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(text)}`;
+}
+
+// ─── HOST: CREATE ROOM ────────────────────────────────────────────────────────
+async function createRoom(){
+  $('setup-status').textContent = 'Creating room…';
+  role = 'host';
+  roomCode = rndCode();
+  const joinUrl = location.href.split('?')[0] + '?code=' + roomCode;
+  await pantrySet('room_' + roomCode, {
+    state: 'lobby',
+    question: -1,
+    players: {},
+    answers: {},
+    revealed: false
+  });
+  $('setup-status').textContent = 'Room created!';
+  $('lobby-code').textContent = roomCode;
+  drawQR('qr-canvas', joinUrl);
+  showScreen('screen-host-lobby');
+  startLobbyPoll();
+}
+
+// ─── HOST: LOBBY POLL ─────────────────────────────────────────────────────────
+function startLobbyPoll(){
+  pollInt = setInterval(async () => {
+    const data = await pantryGet('room_' + roomCode);
+    if(!data) return;
+    players = data.players || {};
+    renderPlayerList();
+  }, POLL_MS);
+}
+
+function renderPlayerList(){
+  const list = $('player-list');
+  const count = Object.keys(players).length;
+  $('player-count').textContent = count;
+  list.innerHTML = '';
+  Object.keys(players).forEach(name => {
+    const b = document.createElement('div');
+    b.className = 'player-badge';
+    b.innerHTML = '<span class="player-dot"></span>' + name;
+    list.appendChild(b);
+  });
+  $('start-btn').disabled = count === 0;
+}
+
+// ─── HOST: START QUIZ ─────────────────────────────────────────────────────────
+async function startQuiz(){
+  clearInterval(pollInt);
+  currentQ = 0;
+  score = 0;
+  await pantryUpdate('room_' + roomCode, cur => ({
+    ...cur,
+    state: 'question',
+    question: 0,
+    answers: {},
+    revealed: false
+  }));
+  renderHostQuestion();
+}
+
+// ─── HOST: RENDER QUESTION ────────────────────────────────────────────────────
+function renderHostQuestion(){
+  revealed = false;
+  answered = false;
+  const q = QUESTIONS[currentQ];
+  $('host-q-num').textContent = 'Q ' + (currentQ+1) + ' / ' + QUESTIONS.length;
+  $('host-q-tag').textContent = q.tag;
+  $('host-q-text').textContent = q.text;
+  $('host-explain').style.display = 'none';
+  $('host-explain').innerHTML = '';
+  $('reveal-btn').style.display = 'inline-block';
+  $('next-btn').style.display   = 'none';
+  $('finish-btn').style.display = 'none';
+
+  // Options
+  const letters = ['A','B','C','D'];
+  const grid = $('host-opts');
+  grid.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const d = document.createElement('div');
+    d.className = 'opt-host';
+    d.id = 'hopt-' + i;
+    d.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt}</span>`;
+    grid.appendChild(d);
+  });
+
+  // Answer bars
+  answerCounts = new Array(q.options.length).fill(0);
+  renderAnswerBars();
+  $('ans-count').textContent = '0';
+
+  // Timer
+  timeLeft = Q_TIME;
+  $('host-timer').textContent = Q_TIME;
+  $('host-timer').className = 'timer-badge';
+  $('host-timer-bar').style.width = '100%';
+  clearInterval(timerInt);
+  timerInt = setInterval(() => {
+    timeLeft--;
+    const pct = (timeLeft / Q_TIME) * 100;
+    $('host-timer-bar').style.width = pct + '%';
+    $('host-timer').textContent = timeLeft;
+    $('host-timer').className = 'timer-badge' + (timeLeft <= 10 ? ' danger' : timeLeft <= 20 ? ' warn' : '');
+    if(timeLeft <= 0){ clearInterval(timerInt); if(!revealed) revealAnswer(); }
+  }, 1000);
+
+  // Poll answers
+  clearInterval(pollInt);
+  pollInt = setInterval(pollAnswers, POLL_MS);
+
+  showScreen('screen-host-q');
+}
+
+function renderAnswerBars(){
+  const q = QUESTIONS[currentQ];
+  const letters = ['A','B','C','D'];
+  const total = answerCounts.reduce((a,b) => a+b, 0) || 1;
+  const bars = $('ans-bars');
+  bars.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const pct = Math.round(answerCounts[i]/total*100);
+    const row = document.createElement('div');
+    row.className = 'ans-row';
+    row.innerHTML = `<span style="font-family:monospace;width:18px;color:var(--muted)">${letters[i]}</span>
+      <div class="ans-fill" style="width:${Math.max(pct,2)}%"></div>
+      <span style="color:var(--muted)">${answerCounts[i]}</span>`;
+    bars.appendChild(row);
+  });
+}
+
+async function pollAnswers(){
+  const data = await pantryGet('room_' + roomCode);
+  if(!data) return;
+  const answers = data.answers || {};
+  const q = QUESTIONS[currentQ];
+  const counts = new Array(q.options.length).fill(0);
+  let total = 0;
+  Object.values(answers).forEach(a => {
+    if(a.q === currentQ && a.choice !== undefined && counts[a.choice] !== undefined){
+      counts[a.choice]++;
+      total++;
+    }
+  });
+  answerCounts = counts;
+  $('ans-count').textContent = total;
+  renderAnswerBars();
+}
+
+// ─── HOST: REVEAL ─────────────────────────────────────────────────────────────
+async function revealAnswer(){
+  revealed = true;
+  clearInterval(timerInt);
+  clearInterval(pollInt);
+  $('host-timer').textContent = '–';
+
+  // Final poll
+  await pollAnswers();
+
+  const q = QUESTIONS[currentQ];
+  // Highlight correct
+  document.querySelectorAll('.opt-host').forEach((el, i) => {
+    if(i === q.correct) el.classList.add('reveal-correct');
+    else el.classList.add('reveal-wrong');
+  });
+
+  // Explanation
+  $('host-explain').innerHTML = q.explain;
+  $('host-explain').style.display = 'block';
+
+  // Update player scores
+  const data = await pantryGet('room_' + roomCode) || {};
+  const answers = data.answers || {};
+  const updatedPlayers = { ...(data.players || {}) };
+  Object.entries(answers).forEach(([name, a]) => {
+    if(a.q === currentQ && a.choice === q.correct){
+      updatedPlayers[name] = (updatedPlayers[name] || 0) + Math.max(1, timeLeft + 1);
+    }
+  });
+
+  await pantryUpdate('room_' + roomCode, cur => ({
+    ...cur,
+    players: updatedPlayers,
+    revealed: true,
+    state: 'revealed'
+  }));
+  players = updatedPlayers;
+
+  $('reveal-btn').style.display = 'none';
+  if(currentQ < QUESTIONS.length - 1){
+    $('next-btn').style.display = 'inline-block';
+  } else {
+    $('finish-btn').style.display = 'inline-block';
+  }
+}
+
+// ─── HOST: NEXT QUESTION ──────────────────────────────────────────────────────
+async function nextQuestion(){
+  currentQ++;
+  await pantryUpdate('room_' + roomCode, cur => ({
+    ...cur,
+    state: 'question',
+    question: currentQ,
+    answers: {},
+    revealed: false
+  }));
+  renderHostQuestion();
+}
+
+// ─── HOST: LEADERBOARD (mid-game) ─────────────────────────────────────────────
+function showLeaderboard(){
+  clearInterval(pollInt);
+  clearInterval(timerInt);
+  $('lb-next-btn').style.display = 'none';
+  $('lb-finish-btn').style.display = 'none';
+  renderLeaderboard(false);
+  showScreen('screen-leaderboard');
+}
+
+function finalLeaderboard(){
+  renderLeaderboard(true);
+  showScreen('screen-leaderboard');
+}
+
+function renderLeaderboard(isFinal){
+  const sorted = Object.entries(players).sort((a,b) => b[1]-a[1]);
+  const list = $('lb-list');
+  list.innerHTML = '';
+  const medals = ['gold','silver','bronze'];
+  sorted.forEach(([name, pts], i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    const rankClass = medals[i] || '';
+    const emoji = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    row.innerHTML = `<span class="lb-rank ${rankClass}">${emoji||'#'+(i+1)}</span>
+      <span class="lb-name">${name}</span>
+      <span class="lb-score">${pts} pts</span>`;
+    list.appendChild(row);
+  });
+  if(sorted.length === 0){
+    list.innerHTML = '<p style="color:var(--muted);text-align:center">No scores yet.</p>';
+  }
+}
+
+// ─── JOIN ─────────────────────────────────────────────────────────────────────
+async function joinRoom(){
+  const code = $('join-code').value.trim();
+  const name = $('join-name').value.trim();
+  if(!code || !name){ $('join-status').textContent = 'Please enter both room code and your name.'; return; }
+  $('join-status').textContent = 'Joining…';
+  const data = await pantryGet('room_' + code);
+  if(!data){ $('join-status').textContent = 'Room not found. Check the code and try again.'; return; }
+
+  role = 'player';
+  roomCode = code;
+  playerName = name;
+  score = 0;
+
+  // Register player
+  await pantryUpdate('room_' + code, cur => {
+    const p = cur.players || {};
+    if(!(name in p)) p[name] = 0;
+    return { ...cur, players: p };
+  });
+
+  $('join-status').textContent = '';
+  showScreen('screen-player-wait');
+  $('wait-msg').textContent = 'Waiting for the host to start the quiz…';
+  startPlayerPoll();
+}
+
+// ─── PLAYER POLL ──────────────────────────────────────────────────────────────
+let lastPlayerQ = -1;
+function startPlayerPoll(){
+  pollInt = setInterval(async () => {
+    const data = await pantryGet('room_' + roomCode);
+    if(!data) return;
+    if(data.state === 'question' && data.question !== lastPlayerQ){
+      lastPlayerQ = data.question;
+      currentQ = data.question;
+      renderPlayerQuestion(data);
+    }
+    if(data.state === 'revealed' && data.question === currentQ){
+      showPlayerResult(data);
+    }
+    if(data.state === 'lobby'){
+      showScreen('screen-player-wait');
+      $('wait-msg').textContent = 'Waiting for the host to start the quiz…';
+    }
+  }, POLL_MS);
+}
+
+// ─── PLAYER: RENDER QUESTION ──────────────────────────────────────────────────
+function renderPlayerQuestion(data){
+  answered = false;
+  const q = QUESTIONS[currentQ];
+  const letters = ['A','B','C','D'];
+  $('player-q-num').textContent = 'Question ' + (currentQ+1) + ' of ' + QUESTIONS.length;
+  $('player-q-text').textContent = q.text;
+  $('player-feedback').textContent = '';
+
+  const opts = $('player-opts');
+  opts.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const d = document.createElement('div');
+    d.className = 'p-opt';
+    d.id = 'popt-' + i;
+    d.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt}</span>`;
+    d.onclick = () => selectPlayerAnswer(i);
+    opts.appendChild(d);
+  });
+
+  // Timer
+  timeLeft = Q_TIME;
+  $('player-timer').textContent = Q_TIME;
+  $('player-timer').className = 'p-timer';
+  clearInterval(timerInt);
+  timerInt = setInterval(() => {
+    timeLeft--;
+    $('player-timer').textContent = timeLeft;
+    $('player-timer').className = 'p-timer' + (timeLeft <= 10 ? ' danger' : timeLeft <= 20 ? ' warn' : '');
+    if(timeLeft <= 0){
+      clearInterval(timerInt);
+      lockPlayerOpts();
+      $('player-feedback').textContent = "Time's up!";
+    }
+  }, 1000);
+
+  showScreen('screen-player-q');
+}
+
+async function selectPlayerAnswer(choice){
+  if(answered) return;
+  answered = true;
+  clearInterval(timerInt);
+  lockPlayerOpts();
+  document.getElementById('popt-' + choice).classList.add('selected');
+  $('player-feedback').textContent = 'Answer submitted! Waiting for results…';
+
+  await pantryUpdate('room_' + roomCode, cur => {
+    const answers = cur.answers || {};
+    answers[playerName] = { q: currentQ, choice };
+    return { ...cur, answers };
+  });
+}
+
+function lockPlayerOpts(){
+  document.querySelectorAll('.p-opt').forEach(el => {
+    el.classList.add('locked');
+    el.onclick = null;
+  });
+}
+
+function showPlayerResult(data){
+  const q = QUESTIONS[currentQ];
+  document.querySelectorAll('.p-opt').forEach((el, i) => {
+    el.classList.add('locked');
+    if(i === q.correct) el.classList.add('result-correct');
+  });
+  const myAnswer = (data.answers || {})[playerName];
+  if(myAnswer && myAnswer.q === currentQ){
+    if(myAnswer.choice === q.correct){
+      $('player-feedback').textContent = '✅ Correct! Well done.';
+    } else {
+      document.getElementById('popt-' + myAnswer.choice)?.classList.add('result-wrong');
+      $('player-feedback').textContent = '❌ Not quite. The correct answer is highlighted.';
+    }
+  }
+}
+
+// ─── AUTO-JOIN VIA URL ────────────────────────────────────────────────────────
+(function checkUrlCode(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(code){
+    showScreen('screen-join');
+    $('join-code').value = code;
+    $('join-name').focus();
+  }
+})();
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+function resetAll(){
+  clearInterval(pollInt);
+  clearInterval(timerInt);
+  role = null; roomCode = null; playerName = null;
+  currentQ = 0; score = 0; players = {};
+  lastPlayerQ = -1;
+  showScreen('screen-home');
+}
+</script>
+</body>
+</html>
