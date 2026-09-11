@@ -407,7 +407,7 @@ async function pantryPut(basket, data){
 }
 async function pantryGet(basket){
   try{
-    const r = await fetch(PANTRY_BASE + basket);
+    const r = await fetch(PANTRY_BASE + basket, { cache: 'no-store' });
     if(!r.ok) return null;
     return r.json();
   }catch(e){
@@ -420,6 +420,34 @@ async function pantryUpdate(basket, fn){
   const next = fn(cur);
   await pantryPut(basket, next);
   return next;
+}
+// pantryGetReliable: used only where we must tell "room really doesn't exist"
+// apart from "request failed" (network hiccup / CORS / Pantry rate limit).
+// Pantry returns 400/404 for a basket that was never created — that's a real
+// "not found". Any other failure (timeout, 429, fetch throwing) is retried
+// a few times before giving up, instead of being reported as "not found".
+async function fetchBasketRaw(basket){
+  try{
+    const r = await fetch(PANTRY_BASE + basket, { cache: 'no-store' });
+    if(r.status === 400 || r.status === 404) return { status: 'not_found' };
+    if(!r.ok){
+      console.error('Pantry get failed', r.status, await r.text().catch(()=>''));
+      return { status: 'error' };
+    }
+    return { status: 'ok', data: await r.json() };
+  }catch(e){
+    console.error('Pantry get failed (network/CORS?)', e);
+    return { status: 'error' };
+  }
+}
+async function pantryGetReliable(basket, attempts=4){
+  for(let i=0;i<attempts;i++){
+    const res = await fetchBasketRaw(basket);
+    if(res.status === 'ok') return res.data;
+    if(res.status === 'not_found') return null;
+    if(i < attempts-1) await sleep(500 * (i+1)); // backoff: 500ms,1000ms,1500ms
+  }
+  return 'ERROR';
 }
 // ─── QR CODE ─────────────────────────────────────────────────────────────────
 function drawQR(canvasId, text){
@@ -659,7 +687,8 @@ async function joinRoom(){
   const name = $('join-name').value.trim();
   if(!code || !name){ $('join-status').textContent = 'Please enter both room code and your name.'; return; }
   $('join-status').textContent = 'Joining…';
-  const data = await pantryGet('room_' + code);
+  const data = await pantryGetReliable('room_' + code);
+  if(data === 'ERROR'){ $('join-status').textContent = 'Connection problem reaching the server. Please check your internet and try again.'; return; }
   if(!data){ $('join-status').textContent = 'Room not found. Check the code and try again.'; return; }
   role = 'player';
   roomCode = code;
