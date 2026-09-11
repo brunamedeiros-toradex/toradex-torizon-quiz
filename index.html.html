@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toradex — Live Technical Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1726; --surface:#131f33; --surface-2:#17253d; --border:#223354;
+    --text:#e9edf4; --muted:#8b9ab1;
+    --lime:#96c837; --lime-dim:#5a7820;
+    --cyan:#00a3e0; --navy:#00508c;
+    --good:#4ddb8f; --bad:#ef5b72;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --display:'Space Grotesk',ui-sans-serif,sans-serif;
+    --body:'Inter',ui-sans-serif,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased;}
+  body{
+    background-image:
+      linear-gradient(rgba(34,51,84,0.45) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,51,84,0.45) 1px, transparent 1px);
+    background-size:42px 42px;
+  }
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+  .center-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;text-align:center;}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px;width:100%;}
+
+  /* Logo bar */
+  .logo-bar{display:flex;align-items:center;justify-content:center;gap:28px;margin-bottom:32px;flex-wrap:wrap;}
+  .logo-bar img{height:32px;width:auto;object-fit:contain;}
+  .logo-divider{width:1px;height:28px;background:var(--border);}
+
+  /* Small logo bar for quiz header */
+  .logo-bar-sm{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+  .logo-bar-sm img{height:22px;width:auto;object-fit:contain;}
+  .logo-divider-sm{width:1px;height:18px;background:var(--border);}
+
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--lime);margin-bottom:10px;text-transform:uppercase;}
+  h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.15;margin:0 0 10px;}
+  .sub{color:var(--muted);font-size:14.5px;line-height:1.6;max-width:420px;margin:0 auto;}
+  .foot-note{font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+  .q-text{font-family:var(--display);font-weight:600;font-size:19px;line-height:1.4;margin:14px 0 0;}
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);}
+  input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;padding:12px 14px;outline:none;font-family:var(--body);}
+  input:focus{border-color:var(--lime);}
+  .big-btn,.big-btn-ghost{width:100%;border-radius:10px;padding:16px 18px;font-size:16px;font-weight:600;font-family:var(--display);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--border);}
+  .big-btn{background:var(--lime);color:#0f1e04;border:none;}
+  .big-btn:hover{filter:brightness(1.08);}
+  .big-btn:disabled{opacity:.6;cursor:default;}
+  .big-btn-ghost{background:transparent;color:var(--text);}
+  .big-btn-sub{font-family:var(--body);font-weight:400;font-size:12.5px;opacity:.75;}
+  .med-btn{background:var(--lime);color:#0f1e04;border:none;border-radius:8px;padding:11px 18px;font-size:14px;font-weight:600;font-family:var(--display);cursor:pointer;white-space:nowrap;}
+  .link-btn{margin-top:16px;background:none;border:none;color:var(--muted);font-size:13.5px;cursor:pointer;text-decoration:underline;}
+  .code-hero{font-family:var(--mono);font-weight:700;font-size:52px;letter-spacing:.18em;color:var(--lime);margin:10px 0;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+  .card-title{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted);}
+  .count-badge{font-family:var(--display);font-weight:700;font-size:18px;color:var(--lime);}
+  .chip{background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:13px;display:inline-block;margin:4px 4px 0 0;}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--cyan);text-transform:uppercase;}
+  .qhead-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .qnum{font-family:var(--mono);font-size:12.5px;color:var(--muted);}
+  .dots{display:flex;gap:5px;flex-wrap:wrap;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--border);}
+  .dot.done{background:var(--lime);}
+  .dot.now{background:var(--cyan);}
+  .opt,.opt-btn{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);font-size:14.5px;position:relative;overflow:hidden;}
+  .opt-btn{width:100%;color:var(--text);text-align:left;cursor:pointer;font-family:var(--body);}
+  .opt-btn:hover:not(:disabled){border-color:var(--lime);}
+  .opt-btn:disabled{cursor:default;}
+  .opt-selected{border-color:var(--lime);background:rgba(150,200,55,0.10);}
+  .opt-correct{border-color:var(--good);background:rgba(77,219,143,0.10);}
+  .opt-wrong{border-color:var(--bad);background:rgba(239,91,114,0.10);}
+  .opt-letter{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;}
+  .opt-fill{position:absolute;inset:0;z-index:0;}
+  .opt-pct{position:relative;z-index:1;font-family:var(--mono);color:var(--muted);font-size:13px;margin-left:auto;}
+  .opt-text{position:relative;z-index:1;flex:1;}
+  .explain-box{margin-top:16px;padding:13px 15px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:13.5px;color:var(--muted);line-height:1.55;}
+  .leader-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;margin-bottom:8px;}
+  .leader-row.me{border-color:var(--lime);}
+  .rank{font-family:var(--display);font-weight:700;font-size:16px;color:var(--lime);width:22px;text-align:center;}
+  .score-pill{font-family:var(--mono);font-size:13px;background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:4px 10px;}
+  .wait-dot{width:14px;height:14px;border-radius:50%;background:var(--lime);margin:0 auto;animation:pulse 1.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  .err-text{color:var(--bad);font-size:13.5px;margin-top:10px;}
+
+  /* QR code container */
+  .qr-wrap{margin:18px auto 0;display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .qr-wrap canvas{border-radius:8px;background:#fff;padding:8px;}
+  .qr-label{font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =========================================================
+   Pantry Cloud ID (already configured)
+========================================================= */
+const PANTRY_ID = "08eb50bb-7e6b-4a98-a094-2d0efafdf2f5";
+const PANTRY_BASE = "https://getpantry.cloud/apiv1/pantry";
+const POLL_MS = 2200;
+
+/* ---------------------------------------------------------
+   Logo URLs
+--------------------------------------------------------- */
+const LOGO_TORADEX = "https://docs1.toradex.com/109746-toradex-logo-white.svg?v=1";
+const LOGO_TORIZON = "https://docs1.toradex.com/105996-torizon-logo-white.svg?v=1";
+
+const LOGO_BAR_HTML = `
+  <div class="logo-bar">
+    <img src="${LOGO_TORADEX}" alt="Toradex" onerror="this.style.display='none'">
+    <div class="logo-divider"></div>
+    <img src="${LOGO_TORIZON}" alt="Torizon" onerror="this.style.display='none'">
+  </div>`;
+
+const LOGO_BAR_SM_HTML = `
+  <div class="logo-bar-sm">
+    <img src="${LOGO_TORADEX}" alt="Toradex" onerror="this.style.display='none'">
+    <div class="logo-divider-sm"></div>
+    <img src="${LOGO_TORIZON}" alt="Torizon" onerror="this.style.display='none'">
+  </div>`;
+
+/* ---------------------------------------------------------
+   QR Code generator (pure JS, no dependency)
+   Uses the free qrcode.js CDN
+--------------------------------------------------------- */
+function injectQRScript(cb){
+  if(window.QRCode){ cb(); return; }
+  const s = document.createElement("script");
+  s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function renderQR(containerId, url){
+  injectQRScript(() => {
+    const el = document.getElementById(containerId);
+    if(!el) return;
+    try {
+      new QRCode(el, {
+        text: url,
+        width: 160, height: 160,
+        colorDark: "#0b1726",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e){ el.textContent = url; }
+  });
+}
+
+/* ---------------------------------------------------------
+   Quiz content — 10 didactic questions
+--------------------------------------------------------- */
+const QUESTIONS = [
+  {
+    tag: "System on Modules",
+    text: "A customer is looking for a high-performance platform that can scale up toward processors like the TI AM69. Which Toradex family do you recommend?",
+    options: ["Lino", "Verdin", "Aquila", "SMARC"],
+    correct: 2,
+    explain: "Aquila is built for high performance and high I/O density — the right family when the customer needs room to grow toward more powerful processors like the TI AM69."
+  },
+  {
+    tag: "System on Modules",
+    text: "A customer wants a compact, cost-effective design and is already familiar with the NXP i.MX 8M Plus ecosystem. Which family fits best?",
+    options: ["Aquila", "Verdin", "OSM", "Apalis"],
+    correct: 1,
+    explain: "Verdin is Toradex's modern, cost-optimized family — designed for compact systems and compatible with the i.MX 8M Plus ecosystem."
+  },
+  {
+    tag: "System on Modules",
+    text: "A customer's procurement team has a strict requirement: the module must follow an open industry standard so they can switch suppliers if needed. Which family do you offer?",
+    options: ["Verdin", "Aquila", "SMARC", "Colibri"],
+    correct: 2,
+    explain: "SMARC follows an open industry standard, which is exactly what customers need when second sourcing or multi-vendor flexibility is a hard requirement."
+  },
+  {
+    tag: "System on Modules",
+    text: "A customer wants to start a brand new project using NXP i.MX 8 processors. Which family is the right recommendation?",
+    options: ["Verdin", "Apalis", "Colibri", "None of the above"],
+    correct: 0,
+    explain: "Verdin is the recommended family for new designs. Apalis and Colibri are still supported for existing projects — but for anything new, Verdin is the answer."
+  },
+  {
+    tag: "Software",
+    text: "Which of the following statements about Yocto BSP and Torizon are true?",
+    options: [
+      "Yocto offers maximum flexibility, but requires strong embedded Linux expertise",
+      "Torizon is ready to use without needing Yocto knowledge, and includes OTA updates and Torizon Cloud",
+      "Torizon offers production-ready images, maintained by Toradex",
+      "All of the above"
+    ],
+    correct: 3,
+    explain: "All three are correct — Yocto is flexible but complex; Torizon is the ready-to-use path with production images, OTA updates and cloud integration, all maintained by Toradex."
+  },
+  {
+    tag: "Software",
+    text: "A customer wants to customize their Torizon OS image — adding packages or drivers — but their team has no experience with Yocto. Which tool solves this?",
+    options: [
+      "Torizon Core Builder (TCB)",
+      "Yocto Project BSP directly",
+      "The VS Code extension only",
+      "Not possible without learning Yocto"
+    ],
+    correct: 0,
+    explain: "Torizon Core Builder (TCB) lets customers customize Torizon OS images and publish builds to Torizon Cloud — no Yocto knowledge needed."
+  },
+  {
+    tag: "Security / CRA",
+    text: "Under the EU Cyber Resilience Act (CRA), manufacturers must provide free security patches for a minimum period after placing a product on the market. How long is that?",
+    options: ["1 year", "2 years", "At least 5 years", "Only during the commercial warranty"],
+    correct: 2,
+    explain: "The CRA sets a minimum floor of 5 years of free security updates. Torizon already ships CRA-ready — with SBOM, Secure Boot and OTA updates built in."
+  },
+  {
+    tag: "Security / CRA",
+    text: "If a manufacturer detects an actively exploited vulnerability, how quickly must they send an early warning to the authorities (CSIRT/ENISA)?",
+    options: ["6 hours", "Within 24 hours", "Within 48 hours", "Within 72 hours"],
+    correct: 1,
+    explain: "The CRA requires an early warning within 24 hours of detecting an actively exploited vulnerability — this is a fast-moving regulatory obligation."
+  },
+  {
+    tag: "Cloud & Services",
+    text: "A customer's devices are deployed in the field with limited or no internet access. How does Torizon Cloud handle software updates in that scenario?",
+    options: [
+      "Through Secure Offline Updates, which don't rely on a constant connection",
+      "Both update modes require a constant internet connection — there's no real difference",
+      "Secure Offline Updates only works on Windows Embedded devices",
+      "Remote Updates is the only mechanism Torizon Cloud offers"
+    ],
+    correct: 0,
+    explain: "Secure Offline Updates is designed exactly for this — it allows fleet updates without depending on continuous connectivity."
+  },
+  {
+    tag: "Channel / Registration",
+    text: "A distributor has identified a project with a customer that has never worked with Toradex before. What type of registration should they request to protect the opportunity and access special pricing?",
+    options: [
+      "Demand Fulfillment",
+      "Demand Creation",
+      "No registration required",
+      "Direct registration with Toradex, bypassing the distributor"
+    ],
+    correct: 1,
+    explain: "Demand Creation applies to new customers or projects — it protects the distributor's opportunity and unlocks Demand-Gen Pricing from their cost book."
+  }
+];
+const TOTAL = QUESTIONS.length;
+
+/* ---------------------------------------------------------
+   Pantry storage layer
+--------------------------------------------------------- */
+const safeKey = s => (s||"").trim().replace(/[^a-zA-Z0-9\-\_]/g,"").slice(0,30) || "anon";
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const genCode = () => Array.from({length:4},()=>CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)]).join("");
+
+async function pantryGet(basket){
+  try{
+    const r = await fetch(`${PANTRY_BASE}/${PANTRY_ID}/basket/${basket}`);
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+async function pantryCreate(basket, obj){
+  try{
+    const r = await fetch(`${PANTRY_BASE}/${PANTRY_ID}/basket/${basket}`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(obj)
+    });
+    return r.ok;
+  }catch(e){ return false; }
+}
+async function pantryMerge(basket, partial){
+  try{
+    const r = await fetch(`${PANTRY_BASE}/${PANTRY_ID}/basket/${basket}`,{
+      method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(partial)
+    });
+    return r.ok;
+  }catch(e){ return false; }
+}
+
+/* ---------------------------------------------------------
+   App state
+--------------------------------------------------------- */
+const S = {
+  role: null,
+  roomCode: "",
+  playerName: "",
+  codeInput: "",
+  nameInput: "",
+  joinError: "",
+  busy: false,
+  room: null,
+  selected: null,
+  hasAnswered: false,
+  lastCheckedQ: -1,
+  pollTimer: null,
+};
+
+function stopPolling(){ if(S.pollTimer){ clearInterval(S.pollTimer); S.pollTimer = null; } }
+
+function startPolling(){
+  stopPolling();
+  const tick = async () => {
+    const room = await pantryGet(S.roomCode);
+    if(!room) return;
+    S.room = room;
+    if(S.role==="player" && room.meta && room.meta.phase==="question" && room.meta.qIndex !== S.lastCheckedQ){
+      S.lastCheckedQ = room.meta.qIndex;
+      const key = safeKey(S.playerName);
+      const qAns = room.answers && room.answers["q"+room.meta.qIndex];
+      if(qAns && qAns[key]){ S.selected = qAns[key].choice; S.hasAnswered = true; }
+      else { S.selected = null; S.hasAnswered = false; }
+    }
+    render();
+  };
+  tick();
+  S.pollTimer = setInterval(tick, POLL_MS);
+}
+
+/* ---------------------------------------------------------
+   Actions
+--------------------------------------------------------- */
+async function becomeHost(code){
+  S.busy = true; render();
+  let room = await pantryGet(code);
+  if(!room){
+    const initial = { meta:{phase:"lobby",qIndex:0}, players:{}, answers:{} };
+    await pantryCreate(code, initial);
+    room = initial;
+  }
+  S.roomCode = code; S.role = "host"; S.room = room; S.busy = false;
+  startPolling(); render();
+}
+
+function goJoinScreen(){ S.role = "join"; render(); }
+
+async function joinAsPlayer(){
+  const code = (S.codeInput||"").trim().toUpperCase();
+  const name = (S.nameInput||"").trim();
+  if(!code || !name){ S.joinError = "Please fill in your name and room code."; render(); return; }
+  S.busy = true; S.joinError = ""; render();
+  const room = await pantryGet(code);
+  if(!room){ S.joinError = "Room not found. Double-check the code with the presenter."; S.busy = false; render(); return; }
+  await pantryMerge(code, { players: { [safeKey(name)]: { name, joinedAt: Date.now() } } });
+  S.roomCode = code; S.playerName = name; S.role = "player"; S.room = room; S.busy = false;
+  startPolling(); render();
+}
+
+function startQuiz(){ pantryMerge(S.roomCode, { meta:{phase:"question",qIndex:0} }); }
+function revealAnswer(){ pantryMerge(S.roomCode, { meta:{phase:"reveal",qIndex:S.room.meta.qIndex} }); }
+function nextQuestion(){
+  const next = S.room.meta.qIndex + 1;
+  if(next >= TOTAL) pantryMerge(S.roomCode, { meta:{phase:"end",qIndex:S.room.meta.qIndex} });
+  else pantryMerge(S.roomCode, { meta:{phase:"question",qIndex:next} });
+}
+async function submitAnswer(oi){
+  if(S.hasAnswered) return;
+  S.selected = oi; S.hasAnswered = true; render();
+  const qIndex = S.room.meta.qIndex;
+  await pantryMerge(S.roomCode, { answers: { ["q"+qIndex]: { [safeKey(S.playerName)]: { choice:oi, at:Date.now() } } } });
+}
+function leaveRoom(){
+  stopPolling();
+  S.role = null; S.roomCode = ""; S.room = null; S.selected = null; S.hasAnswered = false; S.lastCheckedQ = -1;
+  render();
+}
+function newHostSession(){ leaveRoom(); becomeHost(genCode()); }
+
+/* ---------------------------------------------------------
+   Helpers
+--------------------------------------------------------- */
+function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+function esc(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function dotsHtml(current, total){
+  let h = '<div class="dots">';
+  for(let i=0;i<total;i++){
+    const cls = i<current?"dot done":i===current?"dot now":"dot";
+    h += `<div class="${cls}"></div>`;
+  }
+  return h+"</div>";
+}
+function qHeaderHtml(qIndex, tag){
+  return `${LOGO_BAR_SM_HTML}
+    <div class="qhead-row">
+      <span class="tag">${esc(tag)}</span>
+      <span class="qnum">${qIndex+1} / ${TOTAL}</span>
+    </div>
+    ${dotsHtml(qIndex, TOTAL)}`;
+}
+
+/* helper: get join URL for QR */
+function joinUrl(){
+  const base = window.location.href.split("?")[0];
+  return `${base}?code=${S.roomCode}`;
+}
+
+/* ---------------------------------------------------------
+   Render
+--------------------------------------------------------- */
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  /* ---- HOME ---- */
+  if(!S.role){
+    // auto-fill code from URL param
+    const params = new URLSearchParams(window.location.search);
+    const preCode = params.get("code");
+    if(preCode && !S.codeInput) S.codeInput = preCode.toUpperCase();
+
+    app.appendChild(el(`
+      <div class="center-wrap">
+        <div style="margin-bottom:40px">
+          ${LOGO_BAR_HTML}
+          <div class="eyebrow">Live Technical Quiz · FAE &amp; Sales</div>
+          <h1>Test your knowledge on <span style="color:var(--cyan)">Toradex</span></h1>
+          <p class="sub">${TOTAL} questions on module families, software, security and channel strategy.</p>
+        </div>
+        <div style="display:grid;gap:14px;width:100%;max-width:360px">
+          <button class="big-btn" id="btnHost">I'm the presenter<span class="big-btn-sub">I project the room and control the pace</span></button>
+          <button class="big-btn-ghost" id="btnPlayer">I'm a participant<span class="big-btn-sub">I answer on my phone</span></button>
+        </div>
+      </div>`));
+    document.getElementById("btnHost").onclick = () => becomeHost(genCode());
+    document.getElementById("btnPlayer").onclick = goJoinScreen;
+    return;
+  }
+
+  /* ---- JOIN SCREEN ---- */
+  if(S.role === "join"){
+    app.appendChild(el(`
+      <div class="center-wrap">
+        <div style="width:100%;max-width:360px">
+          ${LOGO_BAR_HTML}
+          <div class="eyebrow">Join room</div>
+          <h1 style="font-size:24px;margin-bottom:22px">Enter your name and room code</h1>
+          <label>Your name</label>
+          <input id="nameInput" maxlength="30" placeholder="e.g. Maximiliano" value="${esc(S.nameInput)}">
+          <label style="margin-top:14px">Room code</label>
+          <input id="codeInput" maxlength="6" placeholder="e.g. 7K3M" style="font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase" value="${esc(S.codeInput)}">
+          ${S.joinError ? `<p class="err-text">${esc(S.joinError)}</p>` : ""}
+          <button class="big-btn" id="btnJoin" style="margin-top:20px" ${S.busy?"disabled":""}>${S.busy?"Joining…":"Join room"}</button>
+          <button class="link-btn" id="btnBack">← Back</button>
+        </div>
+      </div>`));
+    document.getElementById("nameInput").oninput = e => S.nameInput = e.target.value;
+    document.getElementById("codeInput").oninput = e => S.codeInput = e.target.value.toUpperCase();
+    document.getElementById("btnJoin").onclick = joinAsPlayer;
+    document.getElementById("btnBack").onclick = () => { S.role = null; render(); };
+    return;
+  }
+
+  if(!S.room){
+    app.appendChild(el(`<div class="center-wrap"><div class="wait-dot"></div><p class="sub" style="margin-top:18px">Setting up room…</p></div>`));
+    return;
+  }
+
+  const meta = S.room.meta;
+
+  /* ---- HOST LOBBY ---- */
+  if(S.role==="host" && meta.phase==="lobby"){
+    const players = Object.values(S.room.players||{});
+    app.appendChild(el(`
+      <div class="center-wrap">
+        <div style="text-align:center;width:100%;max-width:520px">
+          ${LOGO_BAR_HTML}
+          <div class="eyebrow">Room code — each participant enters on their own device</div>
+          <div class="code-hero">${esc(S.roomCode)}</div>
+          <p class="sub" style="margin:18px auto 30px">Ask everyone to open this page, choose "I'm a participant" and enter the code above — or scan the QR code below.</p>
+          <div class="qr-wrap">
+            <div id="qrCanvas"></div>
+            <span class="qr-label">Scan to join</span>
+          </div>
+          <div class="card" style="text-align:left;margin-top:24px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <span class="card-title">Participants</span><span class="count-badge">${players.length}</span>
+            </div>
+            ${players.length===0
+              ? `<p style="color:var(--muted);font-size:13.5px">Waiting for the first participant…</p>`
+              : `<div>${players.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")}</div>`}
+          </div>
+          <button class="big-btn" id="btnStart" style="margin-top:22px">Start quiz →</button>
+        </div>
+      </div>`));
+    document.getElementById("btnStart").onclick = startQuiz;
+    setTimeout(() => renderQR("qrCanvas", joinUrl()), 50);
+    return;
+  }
+
+  /* ---- PLAYER LOBBY ---- */
+  if(S.role==="player" && meta.phase==="lobby"){
+    app.appendChild(el(`
+      <div class="center-wrap">
+        ${LOGO_BAR_HTML}
+        <div class="wait-dot"></div>
+        <h1 style="font-size:24px;margin-top:20px">You're in, ${esc(S.playerName)}!</h1>
+        <p class="sub">Waiting for the presenter to start the quiz…</p>
+        <p class="foot-note" style="margin-top:30px">Room: ${esc(S.roomCode)}</p>
+      </div>`));
+    return;
+  }
+
+  /* ---- HOST QUESTION ---- */
+  if(S.role==="host" && meta.phase==="question"){
+    const q = QUESTIONS[meta.qIndex];
+    const qAns = (S.room.answers && S.room.answers["q"+meta.qIndex]) || {};
+    const answeredCount = Object.keys(qAns).length;
+    const playerTotal = Object.keys(S.room.players||{}).length;
+    app.appendChild(el(`
+      <div class="wrap">
+        ${qHeaderHtml(meta.qIndex, q.tag)}
+        <p class="q-text">${esc(q.text)}</p>
+        <div style="display:grid;gap:10px;margin-top:18px">
+          ${q.options.map((o,oi)=>`<div class="opt"><span class="opt-letter">${"ABCD"[oi]}</span><span class="opt-text">${esc(o)}</span></div>`).join("")}
+        </div>
+        <div class="card" style="margin-top:24px;display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--muted);font-size:14.5px"><b style="color:var(--text);font-family:var(--display);font-size:20px">${answeredCount}</b> of ${playerTotal||"?"} answered</span>
+          <button class="med-btn" id="btnReveal">Reveal answer</button>
+        </div>
+        <div class="qr-wrap" style="margin-top:16px">
+          <div id="qrCanvas"></div>
+          <span class="qr-label">QR to join · Room ${esc(S.roomCode)}</span>
+        </div>
+      </div>`));
+    document.getElementById("btnReveal").onclick = revealAnswer;
+    setTimeout(() => renderQR("qrCanvas", joinUrl()), 50);
+    return;
+  }
+
+  /* ---- PLAYER QUESTION ---- */
+  if(S.role==="player" && meta.phase==="question"){
+    const q = QUESTIONS[meta.qIndex];
+    app.appendChild(el(`
+      <div class="wrap">
+        ${qHeaderHtml(meta.qIndex, q.tag)}
+        <p class="q-text">${esc(q.text)}</p>
+        <div style="display:grid;gap:10px;margin-top:18px" id="optsWrap">
+          ${q.options.map((o,oi)=>{
+            const isSel = S.selected===oi;
+            const cls = isSel?"opt-btn opt-selected":"opt-btn";
+            const style = (S.hasAnswered&&!isSel)?"opacity:.45":"";
+            return `<button class="${cls}" style="${style}" data-oi="${oi}" ${S.hasAnswered?"disabled":""}>
+              <span class="opt-letter" ${isSel?'style="border-color:var(--lime);color:var(--lime)"':''}>${"ABCD"[oi]}</span>
+              <span class="opt-text">${esc(o)}</span>
+            </button>`;
+          }).join("")}
+        </div>
+        ${S.hasAnswered?`<p class="sub" style="margin-top:18px">Answer submitted — waiting for the others…</p>`:""}
+      </div>`));
+    if(!S.hasAnswered){
+      document.querySelectorAll("#optsWrap .opt-btn").forEach(btn=>{
+        btn.onclick = () => submitAnswer(parseInt(btn.dataset.oi,10));
+      });
+    }
+    return;
+  }
+
+  /* ---- REVEAL ---- */
+  if(meta.phase==="reveal"){
+    const q = QUESTIONS[meta.qIndex];
+    const qAns = (S.room.answers && S.room.answers["q"+meta.qIndex]) || {};
+    const counts = q.options.map(()=>0);
+    Object.values(qAns).forEach(a=>{ if(a && typeof a.choice==="number") counts[a.choice]++; });
+    const total = counts.reduce((a,b)=>a+b,0);
+    const optsHtml = q.options.map((o,oi)=>{
+      const isCorrect = oi===q.correct;
+      const isMine = S.role==="player" && S.selected===oi;
+      const pct = total ? Math.round(counts[oi]/total*100) : null;
+      const cls = "opt"+(isCorrect?" opt-correct":(isMine?" opt-wrong":""));
+      const fill = pct!==null?`<div class="opt-fill" style="width:${pct}%;background:${isCorrect?"rgba(77,219,143,0.14)":"rgba(255,255,255,0.04)"}"></div>`:"";
+      return `<div class="${cls}">${fill}
+        <span class="opt-letter" ${isCorrect?'style="border-color:var(--good);color:var(--good)"':''}>${"ABCD"[oi]}</span>
+        <span class="opt-text">${esc(o)}</span>
+        ${pct!==null?`<span class="opt-pct">${pct}%</span>`:""}
+      </div>`;
+    }).join("");
+    app.appendChild(el(`
+      <div class="wrap">
+        ${qHeaderHtml(meta.qIndex, q.tag)}
+        <p class="q-text">${esc(q.text)}</p>
+        <div style="display:grid;gap:10px;margin-top:18px">${optsHtml}</div>
+        <div class="explain-box">${esc(q.explain)}</div>
+        ${S.role==="host"
+          ?`<button class="big-btn" id="btnNext" style="margin-top:20px">${meta.qIndex===TOTAL-1?"See final results →":"Next question →"}</button>`
+          :`<p class="sub" style="margin-top:18px">Waiting for the next question…</p>`}
+      </div>`));
+    if(S.role==="host") document.getElementById("btnNext").onclick = nextQuestion;
+    return;
+  }
+
+  /* ---- END / LEADERBOARD ---- */
+  if(meta.phase==="end"){
+    const players = S.room.players||{};
+    const board = {};
+    Object.keys(players).forEach(k=>{ board[k]={ name:players[k].name, score:0 }; });
+    const answers = S.room.answers||{};
+    Object.keys(answers).forEach(qKey=>{
+      const qIdx = parseInt(qKey.slice(1),10);
+      const qObj = answers[qKey];
+      Object.keys(qObj).forEach(pKey=>{
+        if(!board[pKey]) board[pKey]={ name:qObj[pKey].name||pKey, score:0 };
+        if(QUESTIONS[qIdx] && qObj[pKey].choice===QUESTIONS[qIdx].correct) board[pKey].score++;
+      });
+    });
+    const list = Object.values(board).sort((a,b)=>b.score-a.score);
+    app.appendChild(el(`
+      <div class="center-wrap">
+        <div style="width:100%;max-width:480px">
+          ${LOGO_BAR_HTML}
+          <div style="text-align:center;margin-bottom:26px">
+            <div class="eyebrow">Final results</div>
+            <h1 style="font-size:28px">Quiz leaderboard</h1>
+          </div>
+          <div>${list.map((p,i)=>`
+            <div class="leader-row ${p.name===S.playerName?"me":""}">
+              <span class="rank">${i+1}</span>
+              <span style="flex:1;font-size:15px">${esc(p.name)}</span>
+              <span class="score-pill">${p.score}/${TOTAL}</span>
+            </div>`).join("")}</div>
+          ${S.role==="host"
+            ?`<button class="big-btn" id="btnRestart" style="margin-top:24px">New session</button>`
+            :`<button class="big-btn-ghost" id="btnLeave" style="margin-top:24px">Leave room</button>`}
+        </div>
+      </div>`));
+    if(S.role==="host") document.getElementById("btnRestart").onclick = newHostSession;
+    else document.getElementById("btnLeave").onclick = leaveRoom;
+    return;
+  }
+}
+
+render();
+</script>
+</body>
+</html>
