@@ -407,7 +407,7 @@ async function pantryPut(basket, data){
 }
 async function pantryGet(basket){
   try{
-    const r = await fetch(PANTRY_BASE + basket, { cache: 'no-store' });
+    const r = await fetch(PANTRY_BASE + basket);
     if(!r.ok) return null;
     return r.json();
   }catch(e){
@@ -415,39 +415,22 @@ async function pantryGet(basket){
     return null;
   }
 }
+async function pantryGetReliable(basket){
+  try{
+    const r = await fetch(PANTRY_BASE + basket);
+    if(r.status === 404) return null;
+    if(!r.ok) return 'ERROR';
+    return r.json();
+  }catch(e){
+    console.error('Pantry get failed', e);
+    return 'ERROR';
+  }
+}
 async function pantryUpdate(basket, fn){
   const cur = await pantryGet(basket) || {};
   const next = fn(cur);
   await pantryPut(basket, next);
   return next;
-}
-// pantryGetReliable: used only where we must tell "room really doesn't exist"
-// apart from "request failed" (network hiccup / CORS / Pantry rate limit).
-// Pantry returns 400/404 for a basket that was never created — that's a real
-// "not found". Any other failure (timeout, 429, fetch throwing) is retried
-// a few times before giving up, instead of being reported as "not found".
-async function fetchBasketRaw(basket){
-  try{
-    const r = await fetch(PANTRY_BASE + basket, { cache: 'no-store' });
-    if(r.status === 400 || r.status === 404) return { status: 'not_found' };
-    if(!r.ok){
-      console.error('Pantry get failed', r.status, await r.text().catch(()=>''));
-      return { status: 'error' };
-    }
-    return { status: 'ok', data: await r.json() };
-  }catch(e){
-    console.error('Pantry get failed (network/CORS?)', e);
-    return { status: 'error' };
-  }
-}
-async function pantryGetReliable(basket, attempts=4){
-  for(let i=0;i<attempts;i++){
-    const res = await fetchBasketRaw(basket);
-    if(res.status === 'ok') return res.data;
-    if(res.status === 'not_found') return null;
-    if(i < attempts-1) await sleep(500 * (i+1)); // backoff: 500ms,1000ms,1500ms
-  }
-  return 'ERROR';
 }
 // ─── QR CODE ─────────────────────────────────────────────────────────────────
 function drawQR(canvasId, text){
@@ -464,7 +447,7 @@ function drawQR(canvasId, text){
     ctx.font = '11px monospace';
     ctx.fillText('QR unavailable', 4, 72);
   };
-  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(text)}`;
+  img.src = "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" + encodeURIComponent(text);
 }
 // ─── HOST: CREATE ROOM ────────────────────────────────────────────────────────
 async function createRoom(){
@@ -544,7 +527,7 @@ function renderHostQuestion(){
   q.options.forEach((opt, i) => {
     const d = document.createElement('div');
     d.className = 'opt-host';
-    d.id  = 'hopt-' + i;
+    d.id = 'hopt-' + i;
     d.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt}</span>`;
     grid.appendChild(d);
   });
@@ -578,9 +561,7 @@ function renderAnswerBars(){
     const pct = Math.round(answerCounts[i]/total*100);
     const row = document.createElement('div');
     row.className = 'ans-row';
-    row.innerHTML = `<span style="font-family:monospace;width:18px;color:var(--muted)">${letters[i]}</span>
-      <div class="ans-fill" style="width:${Math.max(pct,2)}%"></div>
-      <span style="color:var(--muted)">${answerCounts[i]}</span>`;
+    row.innerHTML = `<span style="font-family:monospace;width:18px;color:var(--muted)">${letters[i]}</span><div class="ans-fill" style="width:${Math.max(pct,2)}%"></div><span style="color:var(--muted)">${answerCounts[i]}</span>`;
     bars.appendChild(row);
   });
 }
@@ -672,9 +653,7 @@ function renderLeaderboard(isFinal){
     row.className = 'lb-row';
     const rankClass = medals[i] || '';
     const emoji = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-    row.innerHTML = `<span class="lb-rank ${rankClass}">${emoji||'#'+(i+1)}</span>
-      <span class="lb-name">${name}</span>
-      <span class="lb-score">${pts} pts</span>`;
+    row.innerHTML = `<span class="lb-rank ${rankClass}">${emoji||'#'+(i+1)}</span><span class="lb-name">${name}</span><span class="lb-score">${pts} pts</span>`;
     list.appendChild(row);
   });
   if(sorted.length === 0){
@@ -688,7 +667,10 @@ async function joinRoom(){
   if(!code || !name){ $('join-status').textContent = 'Please enter both room code and your name.'; return; }
   $('join-status').textContent = 'Joining…';
   const data = await pantryGetReliable('room_' + code);
-  if(data === 'ERROR'){ $('join-status').textContent = 'Connection problem reaching the server. Please check your internet and try again.'; return; }
+  if(data === 'ERROR'){
+    $('join-status').textContent = 'Connection problem reaching the server. Check your internet/firewall and try again.';
+    return;
+  }
   if(!data){ $('join-status').textContent = 'Room not found. Check the code and try again.'; return; }
   role = 'player';
   roomCode = code;
@@ -737,7 +719,7 @@ function renderPlayerQuestion(data){
   q.options.forEach((opt, i) => {
     const d = document.createElement('div');
     d.className = 'p-opt';
-    d.id  = 'popt-' + i;
+    d.id = 'popt-' + i;
     d.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt}</span>`;
     d.onclick = () => selectPlayerAnswer(i);
     opts.appendChild(d);
